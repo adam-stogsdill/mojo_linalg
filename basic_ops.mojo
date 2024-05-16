@@ -13,7 +13,20 @@ fn vector_dot_product(tensor_a: Tensor[DType.float32], tensor_b: Tensor[DType.fl
 fn is_matrix(vector: Tensor[DType.float32]) -> Bool:
     return vector.shape().rank() == 2
 
-fn transpose(owned tensor: Tensor[DType.float32]) raises -> Tensor[DType.float32]:
+fn tensor_equal(a: Tensor[DType.float32], b: Tensor[DType.float32]) -> Bool:
+    if a.shape() != b.shape():
+        return False
+    var a_data = a.data()
+    var b_data = b.data()
+    for i in range(a.shape().num_elements()):
+        if a_data[i] != b_data[i]:
+            return False
+    return True
+
+fn is_symmetric(t: Tensor[DType.float32]) -> Bool:
+    return tensor_equal(t, transpose(t))
+
+fn transpose(owned tensor: Tensor[DType.float32]) -> Tensor[DType.float32]:
     print(tensor.shape().num_elements())
     if is_matrix(tensor):
         var rows = tensor.shape()[0]
@@ -25,12 +38,14 @@ fn transpose(owned tensor: Tensor[DType.float32]) raises -> Tensor[DType.float32
         return output_tensor
     else:
         var columns = tensor.shape()[0]
-       
-        return tensor.reshape(new_shape=TensorShape(columns, 1))
+        var output_tensor = Tensor[DType.float32](TensorSpec(DType.float32, columns, 1))
+        for i in range(columns):
+            output_tensor[Index(i, 1)] = tensor[i]
+        return output_tensor
 
 fn cholesky_decomposition(tensor: Tensor[DType.float32]) raises -> Tensor[DType.float32]:
     # As per the Cholesky-Banachiewicz Algorithm
-    print(tensor.shape().rank(), not is_matrix(tensor))
+    #print(tensor.shape().rank(), not is_matrix(tensor))
     assert_true(is_matrix(tensor), msg='Given Tensor in Cholesky Decomposition is NOT A MATRIX')
     assert_equal(lhs=tensor.shape()[0], rhs=tensor.shape()[1], msg='Tensor in Cholesky Decomposition is NOT SQUARE')
     var n = tensor.shape()[0]
@@ -52,6 +67,10 @@ fn cholesky_decomposition(tensor: Tensor[DType.float32]) raises -> Tensor[DType.
 fn main() raises:
     var a_elements = List[SIMD[DType.float32, 1]](4.0, 12.0, -16.0, 12.0, 37.0, -43.0, -16.0, -43.0, 98.0)
     var a_tensor = Tensor[DType.float32](TensorShape(3, 3), a_elements)
+    var b_elements = List[SIMD[DType.float32, 1]](4.0, 12.0, -16.0, 12.0, 37.0, -43.0, -16.0, -43.0, 98.0)
+    var b_tensor = Tensor[DType.float32](TensorShape(3, 3), b_elements)
     print(a_tensor)
+    print("IS SYMMETRIC?:", is_symmetric(a_tensor))
     print(cholesky_decomposition(a_tensor))
     print(transpose(cholesky_decomposition(a_tensor)))
+    print(tensor_equal(a_tensor, b_tensor))
